@@ -68,9 +68,16 @@ namespace Rhino.ServiceBus.Topshelf
 			return configuration;
 		}
 
-		protected virtual string BuildEndpointForMessageConsumer(Type type)
+		protected string BuildEndpointForMessageConsumer(Type type)
 		{
-			return "msmq://localhost/" + type.FullName;
+			return "msmq://localhost/" + MakeTypeNameSafeForQueue(type);
 		}
+
+		private string MakeTypeNameSafeForQueue(Type type)
+		{
+			return invalidQueueNameCharacters.Aggregate(type.FullName, (name, c) => name.Replace(c, '_'));
+		}
+
+		private static readonly char[] invalidQueueNameCharacters = new[] {'\\', ';', '\r', '\n', '+', ',', '"'};
 	}
 }
