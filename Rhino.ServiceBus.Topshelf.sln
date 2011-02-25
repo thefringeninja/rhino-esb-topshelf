@@ -1,0 +1,26 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rhino.ServiceBus.Topshelf", "Rhino.ServiceBus.Topshelf\Rhino.ServiceBus.Topshelf.csproj", "{99863366-4697-425C-B90C-9FE84BFC494C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rhino.ServiceBus.Topshelf.Tests", "Rhino.ServiceBus.Topshelf.Tests\Rhino.ServiceBus.Topshelf.Tests.csproj", "{9D1FEF56-7403-412F-9DA5-2F471163F012}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{99863366-4697-425C-B90C-9FE84BFC494C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{99863366-4697-425C-B90C-9FE84BFC494C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{99863366-4697-425C-B90C-9FE84BFC494C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{99863366-4697-425C-B90C-9FE84BFC494C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9D1FEF56-7403-412F-9DA5-2F471163F012}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9D1FEF56-7403-412F-9DA5-2F471163F012}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9D1FEF56-7403-412F-9DA5-2F471163F012}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9D1FEF56-7403-412F-9DA5-2F471163F012}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
