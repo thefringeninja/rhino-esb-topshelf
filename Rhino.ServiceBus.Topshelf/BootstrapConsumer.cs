@@ -20,6 +20,11 @@ namespace Rhino.ServiceBus.Topshelf
 		where TMessageConsumer : class, IMessageConsumer
 		where TBootStrapper : AbstractBootStrapper
 	{
+		public virtual string StandaloneConfigurationFilename
+		{
+			get { return typeof (TMessageConsumer).Name + ".config"; }
+		}
+
 		protected virtual IEnumerable<Type> MessageConsumerImplementations
 		{
 			get
@@ -39,6 +44,7 @@ namespace Rhino.ServiceBus.Topshelf
 			cfg.HowToBuildService(name =>
 			{
 				var host = new DefaultHost();
+				host.UseStandaloneCastleConfigurationFileName(StandaloneConfigurationFilename);
 				host.BusConfiguration(BusConfiguration);
 				return host;
 			});
