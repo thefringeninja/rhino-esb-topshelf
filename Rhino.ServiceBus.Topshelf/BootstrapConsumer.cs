@@ -102,9 +102,9 @@ namespace Rhino.ServiceBus.Topshelf
 
 		private static IEnumerable<XAttribute> GetConfigurationNode(FileInfo file)
 		{
-			using (var stream = file.OpenRead())
+			using (var reader = file.OpenText())
 			{
-				var element = (from e in XDocument.Load(stream).Descendants("facility")
+				var element = (from e in XDocument.Load(reader).Descendants("facility")
 				               where (string) e.Attribute("id") == "rhino.esb"
 				               select e).FirstOrDefault();
 				if (element == null)
