@@ -19,7 +19,7 @@ namespace Rhino.ServiceBus.Topshelf
 				c.RunAsLocalSystem();
 
 				var bootStrapperTypes = from type in Assembly.GetCallingAssembly().GetTypes()
-				                        where type.IsGenericallyAssignableFrom(typeof (BootstrapConsumer<>))
+				                        where typeof (BootstrapConsumer<,>).IsGenericallyAssignableFrom(type)
 				                              && false == type.IsAbstract
 				                              && false == type.IsInterface
 				                              && type.GetConstructor(Type.EmptyTypes) != null
