@@ -25,7 +25,11 @@ namespace Rhino.ServiceBus.Topshelf
 
 		public virtual string StandaloneConfigurationFilename
 		{
-			get { return typeof (TMessageConsumer).Name + ".config"; }
+			get
+			{
+				var fileName = typeof (TMessageConsumer).Name + ".config";
+				return false == File.Exists(fileName) ? null : fileName;
+			}
 		}
 
 		protected virtual IEnumerable<Type> MessageConsumerImplementations
@@ -81,6 +85,8 @@ namespace Rhino.ServiceBus.Topshelf
 
 		protected HostConfiguration PatchWithExistingConfiguration(HostConfiguration configuration)
 		{
+			if (String.IsNullOrEmpty(StandaloneConfigurationFilename))
+				return configuration;
 			var file = new FileInfo(StandaloneConfigurationFilename);
 			if (false == file.Exists)
 				return configuration;
