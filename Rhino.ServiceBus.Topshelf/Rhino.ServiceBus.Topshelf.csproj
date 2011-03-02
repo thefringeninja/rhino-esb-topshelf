@@ -56,6 +56,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BootstrapConsumer.cs" />
+    <Compile Include="HostedService.cs" />
     <Compile Include="HostingRhinoESB.cs" />
     <Compile Include="NoOpBootStrapper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

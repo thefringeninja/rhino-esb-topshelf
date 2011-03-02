@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Text;
 using Rhino.ServiceBus.Hosting;
 using Topshelf;
 using Topshelf.Configuration.Dsl;
@@ -19,7 +17,7 @@ namespace Rhino.ServiceBus.Topshelf
 				c.RunAsLocalSystem();
 
 				var bootStrapperTypes = from type in Assembly.GetCallingAssembly().GetTypes()
-				                        where typeof (BootstrapConsumer<,>).IsGenericallyAssignableFrom(type)
+				                        where typeof (BootstrapConsumer<,,>).IsGenericallyAssignableFrom(type)
 				                              && false == type.IsAbstract
 				                              && false == type.IsInterface
 				                              && type.GetConstructor(Type.EmptyTypes) != null
@@ -27,11 +25,11 @@ namespace Rhino.ServiceBus.Topshelf
 
 				foreach (var bootStrapperType in bootStrapperTypes)
 				{
-					var bootStrapper = (Bootstrapper<DefaultHost>) (bootStrapperType.GetConstructor(Type.EmptyTypes).IsPublic
+					var bootStrapper = (Bootstrapper<IApplicationHost>) (bootStrapperType.GetConstructor(Type.EmptyTypes).IsPublic
 					                                                	? Activator.CreateInstance(bootStrapperType)
 					                                                	: Activator.CreateInstance(bootStrapperType, true));
 
-					c.ConfigureService<DefaultHost>(bootStrapper.InitializeHostedService);
+					c.ConfigureService<IApplicationHost>(bootStrapper.InitializeHostedService);
 				}
 			});
 			Runner.Host(cfg, args);

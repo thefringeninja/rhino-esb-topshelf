@@ -16,7 +16,7 @@ namespace Rhino.ServiceBus.Topshelf.Tests
 {
 	public class HostingWithTopshelf
 	{
-		private readonly Bootstrapper<DefaultHost> pingService;
+		private readonly Bootstrapper<IApplicationHost> pingService;
 		private readonly DefaultHost host;
 
 		private static int retryCount;
@@ -36,7 +36,7 @@ namespace Rhino.ServiceBus.Topshelf.Tests
 		[Fact]
 		public void Can_set_the_default_endpoint_by_convention()
 		{
-			var runner = RunnerConfigurator.New(c => c.ConfigureService<DefaultHost>(pingService.InitializeHostedService));
+			var runner = RunnerConfigurator.New(c => c.ConfigureService<IApplicationHost>(pingService.InitializeHostedService));
 			using (runner.Coordinator)
 			{
 				try
@@ -59,7 +59,7 @@ namespace Rhino.ServiceBus.Topshelf.Tests
 		[Fact]
 		public void Can_load_configuration_file_by_convention()
 		{
-			var runner = RunnerConfigurator.New(c => c.ConfigureService<DefaultHost>(pingService.InitializeHostedService));
+			var runner = RunnerConfigurator.New(c => c.ConfigureService<IApplicationHost>(pingService.InitializeHostedService));
 			using (runner.Coordinator)
 			{
 				try
@@ -127,11 +127,8 @@ namespace Rhino.ServiceBus.Topshelf.Tests
 			}
 		}
 
-		public class PingBootstrapConsumer : BootstrapConsumer<PingConsumer, TestBootStrapper>
-		{
-
-
-		}
+		[Serializable]
+		public class PingBootstrapConsumer : BootstrapConsumer<PingConsumer, HostedService, TestBootStrapper>{}
 
 		public class PongBootstrapper : AbstractBootStrapper
 		{
