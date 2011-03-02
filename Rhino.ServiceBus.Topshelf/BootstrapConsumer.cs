@@ -35,11 +35,7 @@ namespace Rhino.ServiceBus.Topshelf
 
 		public void InitialDeployment()
 		{
-			var appDomain = AppDomain.CreateDomain(typeof (TMessageConsumer).Name, null,
-			                                       new AppDomainSetup
-			                                       {
-			                                       	ApplicationBase = AppDomain.CurrentDomain.BaseDirectory
-			                                       });
+			var appDomain = CreateAppDomain();
 			try
 			{
 				using (var host = BuildAndConfigureHost(appDomain))
@@ -57,11 +53,7 @@ namespace Rhino.ServiceBus.Topshelf
 
 		public void InitializeHostedService(IServiceConfigurator<IApplicationHost> cfg)
 		{
-			var appDomain = AppDomain.CreateDomain(typeof(TMessageConsumer).Name, null, 
-				new AppDomainSetup
-			{
-				ApplicationBase = AppDomain.CurrentDomain.BaseDirectory
-			});
+			var appDomain = CreateAppDomain();
 
 			cfg.HowToBuildService(name => BuildAndConfigureHost(appDomain));
 			cfg.WhenStarted(host =>
@@ -74,6 +66,15 @@ namespace Rhino.ServiceBus.Topshelf
 				host.Dispose();
 				AppDomain.Unload(appDomain);
 			});
+		}
+
+		private AppDomain CreateAppDomain()
+		{
+			return AppDomain.CreateDomain(typeof(TMessageConsumer).Name, null, 
+			                              new AppDomainSetup
+			                              {
+			                              	ApplicationBase = AppDomain.CurrentDomain.BaseDirectory
+			                              });
 		}
 
 		private HostedService BuildAndConfigureHost(AppDomain appDomain)
