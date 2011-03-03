@@ -3,7 +3,7 @@ using System.Linq;
 
 namespace Rhino.ServiceBus.Topshelf
 {
-	public static class TypeExtensions
+	internal static class TypeExtensions
 	{
 		public static bool IsGenericallyAssignableFrom(this Type genericType, Type givenType)
 		{
