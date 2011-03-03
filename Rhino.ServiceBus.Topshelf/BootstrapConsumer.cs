@@ -73,7 +73,8 @@ namespace Rhino.ServiceBus.Topshelf
 			return AppDomain.CreateDomain(typeof(TMessageConsumer).Name, null, 
 			                              new AppDomainSetup
 			                              {
-			                              	ApplicationBase = AppDomain.CurrentDomain.BaseDirectory
+			                              	ApplicationBase = AppDomain.CurrentDomain.BaseDirectory,
+											LoaderOptimization = LoaderOptimization.MultiDomain
 			                              });
 		}
 
