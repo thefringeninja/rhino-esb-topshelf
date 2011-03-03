@@ -40,6 +40,9 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\SharedLibs\Castle.Windsor.dll</HintPath>
     </Reference>
+    <Reference Include="Rhino.PersistentHashTable">
+      <HintPath>..\SharedLibs\Rhino.PersistentHashTable.dll</HintPath>
+    </Reference>
     <Reference Include="Rhino.ServiceBus">
       <HintPath>..\SharedLibs\Rhino.ServiceBus.dll</HintPath>
     </Reference>

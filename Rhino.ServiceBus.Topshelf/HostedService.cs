@@ -8,14 +8,14 @@ using Rhino.ServiceBus.Internal;
 
 namespace Rhino.ServiceBus.Topshelf
 {
-	public class HostedService : MarshalByRefObject, IApplicationHost
+	public abstract class HostedService : MarshalByRefObject, IApplicationHost
 	{
-		private static readonly char[] invalidQueueNameCharacters = new[] {'\\', ';', '\r', '\n', '+', ',', '"'};
+		private static readonly char[] InvalidQueueNameCharacters = new[] {'\\', ';', '\r', '\n', '+', ',', '"'};
 		private readonly DefaultHost host;
 		protected Type MessageConsumerType { get; private set; }
 		protected string StandaloneConfigurationFilename { get; private set; }
 
-		public HostedService()
+		protected HostedService()
 		{
 			host = new DefaultHost();
 		}
@@ -37,11 +37,13 @@ namespace Rhino.ServiceBus.Topshelf
 		public void Dispose()
 		{
 			host.Dispose();
+			Console.WriteLine("Host for {0} disposed", MessageConsumerType);
 		}
 
 		public void Start(string assembly)
 		{
 			host.Start(assembly);
+			Console.WriteLine("Host for {0}, {1} started", MessageConsumerType, assembly);
 		}
 
 		public void InitialDeployment(string assembly, string user)
@@ -116,7 +118,7 @@ namespace Rhino.ServiceBus.Topshelf
 
 		protected virtual HostConfiguration BusConfiguration(HostConfiguration configuration)
 		{
-			configuration.Bus(BuildEndpointForMessageConsumer(MessageConsumerType));
+			configuration.Bus(BuildEndpointForMessageConsumer(MessageConsumerType).ToString(), MessageConsumerType.Name);
 			var consumerTypes = from type in MessageConsumerImplementations
 			                    from iface in type.GetInterfaces()
 			                    where iface.IsGenericType
@@ -129,22 +131,29 @@ namespace Rhino.ServiceBus.Topshelf
 			                    };
 			foreach (var item in consumerTypes)
 			{
-				configuration.Receive(item.message, BuildEndpointForMessageConsumer(item.implementation));
+				configuration.Receive(item.message, BuildEndpointForMessageConsumer(item.implementation).ToString());
 			}
 
 			configuration = PatchWithExistingConfiguration(configuration, StandaloneConfigurationFilename);
 			return configuration;
 		}
 
+		protected abstract string Protocol { get; }
 
-		protected string BuildEndpointForMessageConsumer(Type type)
+		virtual protected Uri BuildEndpointForMessageConsumer(Type type)
 		{
-			return "msmq://localhost/" + MakeTypeNameSafeForQueue(type);
+			var endpoint = Protocol + "://localhost/" + MakeQueueNameSafe(TypeToQueueName(type));
+			return new Uri(endpoint);
 		}
 
-		private string MakeTypeNameSafeForQueue(Type type)
+		virtual protected string TypeToQueueName(Type type)
 		{
-			return invalidQueueNameCharacters.Aggregate(type.FullName, (name, c) => name.Replace(c, '_'));
+			return type.FullName;
+		}
+
+		virtual protected string MakeQueueNameSafe(string queueName)
+		{
+			return InvalidQueueNameCharacters.Aggregate(queueName, (name, c) => name.Replace(c, '_'));
 		}
 	}
 }

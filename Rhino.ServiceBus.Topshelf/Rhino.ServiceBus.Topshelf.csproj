@@ -55,11 +55,14 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ServiceAppDomain.cs" />
     <Compile Include="BootstrapConsumer.cs" />
     <Compile Include="HostedService.cs" />
     <Compile Include="HostingRhinoESB.cs" />
+    <Compile Include="MSMQHostedService.cs" />
     <Compile Include="NoOpBootStrapper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RhinoQueuesHostedService.cs" />
     <Compile Include="TypeExtensions.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

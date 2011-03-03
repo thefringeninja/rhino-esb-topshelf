@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Threading;
-using System.Xml.Linq;
 using Rhino.ServiceBus.Hosting;
 using Rhino.ServiceBus.Internal;
 using Topshelf.Configuration.Dsl;
@@ -12,7 +9,7 @@ using Topshelf.Shelving;
 namespace Rhino.ServiceBus.Topshelf
 {
 	public abstract class BootstrapConsumer<TMessageConsumer>
-		: BootstrapConsumer<TMessageConsumer, HostedService, NoOpBootStrapper>
+		: BootstrapConsumer<TMessageConsumer, MSMQHostedService, NoOpBootStrapper>
 		where TMessageConsumer : class, IMessageConsumer
 	{
 	}
@@ -22,7 +19,7 @@ namespace Rhino.ServiceBus.Topshelf
 		: Bootstrapper<IApplicationHost>
 		where TMessageConsumer : class, IMessageConsumer
 		where TBootStrapper : AbstractBootStrapper
-		where THost : HostedService
+		where THost : HostedService, new()
 	{
 		public virtual string StandaloneConfigurationFilename
 		{
@@ -30,22 +27,6 @@ namespace Rhino.ServiceBus.Topshelf
 			{
 				var fileName = typeof (TMessageConsumer).Name + ".config";
 				return false == File.Exists(fileName) ? null : fileName;
-			}
-		}
-
-		public void InitialDeployment()
-		{
-			var appDomain = CreateAppDomain();
-			try
-			{
-				using (var host = BuildAndConfigureHost(appDomain))
-				{
-					host.InitialDeployment(typeof(TMessageConsumer).Assembly.FullName, Thread.CurrentPrincipal.Identity.Name);
-				}
-			}
-			finally
-			{
-				AppDomain.Unload(appDomain);
 			}
 		}
 
@@ -58,24 +39,43 @@ namespace Rhino.ServiceBus.Topshelf
 			cfg.HowToBuildService(name => BuildAndConfigureHost(appDomain));
 			cfg.WhenStarted(host =>
 			{
-				host.SetBootStrapperTypeName(typeof (TBootStrapper).FullName);
-				host.Start(typeof (TBootStrapper).Assembly.FullName);
+				var mutex = new Mutex(false, "Huh");
+				try
+				{
+					mutex.WaitOne();
+					host.SetBootStrapperTypeName(typeof (TBootStrapper).FullName);
+					host.Start(typeof (TBootStrapper).Assembly.FullName);
+				}
+				finally
+				{
+					mutex.ReleaseMutex();
+				}
 			});
-			cfg.WhenStopped(host =>
+			cfg.WhenStopped(host => host.Dispose());
+		}
+
+		#endregion
+
+		public void InitialDeployment()
+		{
+			var appDomain = CreateAppDomain();
+			using (var host = BuildAndConfigureHost(appDomain))
 			{
-				host.Dispose();
-				AppDomain.Unload(appDomain);
-			});
+				host.SetBootStrapperTypeName(typeof (TBootStrapper).FullName);
+				host.InitialDeployment(typeof (TMessageConsumer).Assembly.FullName, Thread.CurrentPrincipal.Identity.Name);
+			}
 		}
 
 		private AppDomain CreateAppDomain()
 		{
-			return AppDomain.CreateDomain(typeof(TMessageConsumer).Name, null, 
-			                              new AppDomainSetup
-			                              {
-			                              	ApplicationBase = AppDomain.CurrentDomain.BaseDirectory,
-											LoaderOptimization = LoaderOptimization.MultiDomain
-			                              });
+			var appDomain = AppDomain.CreateDomain(typeof (TMessageConsumer).Name, null,
+			                                       new AppDomainSetup
+			                                       {
+			                                       	ApplicationBase = AppDomain.CurrentDomain.BaseDirectory,
+			                                       	LoaderOptimization = LoaderOptimization.MultiDomain
+			                                       });
+			ServiceAppDomain.Set(ServiceAppDomain.Instance, appDomain);
+			return appDomain;
 		}
 
 		private HostedService BuildAndConfigureHost(AppDomain appDomain)
@@ -83,13 +83,10 @@ namespace Rhino.ServiceBus.Topshelf
 			var host = (HostedService) appDomain
 			                           	.CreateInstanceAndUnwrap(typeof (THost).Assembly.FullName,
 			                           	                         typeof (THost).FullName);
-			host.SetMessageConsumerType(typeof(TMessageConsumer).AssemblyQualifiedName);
+			host.SetMessageConsumerType(typeof (TMessageConsumer).AssemblyQualifiedName);
 			host.UseStandaloneCastleConfigurationFileName(StandaloneConfigurationFilename);
 			host.Configure();
 			return host;
 		}
-
-		#endregion
-
 	}
 }

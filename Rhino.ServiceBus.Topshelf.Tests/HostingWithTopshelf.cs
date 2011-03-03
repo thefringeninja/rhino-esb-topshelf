@@ -1,37 +1,56 @@
 ﻿using System;
 using System.Linq;
 using System.Threading;
-using Castle.Core.Configuration;
 using Castle.MicroKernel;
-using Castle.Windsor;
-using Rhino.ServiceBus.Config;
 using Rhino.ServiceBus.Hosting;
 using Rhino.ServiceBus.Impl;
 using Topshelf.Configuration.Dsl;
-using Topshelf.Model;
 using Topshelf.Shelving;
 using Xunit;
 
 namespace Rhino.ServiceBus.Topshelf.Tests
 {
-	public class HostingWithTopshelf
+	public class HostingRhinoQueuesWithTopshelf
+		: HostingWithTopshelf<RhinoQueuesHostedService>
 	{
-		private readonly Bootstrapper<IApplicationHost> pingService;
-		private readonly DefaultHost host;
-
-		private static int retryCount;
-
-		public HostingWithTopshelf()
+		protected override void ConfigureBus(DefaultHost host)
 		{
+			RhinoQueuesHostedService.StartWithPort(22001);
+			host.BusConfiguration(
+			                      c =>
+			                      c.Bus("rhino.queues://localhost:22002/rhino_servicebus_topshelf_tests_pongconsumer", "pongconsumer")
+			                      	.Receive("Rhino.ServiceBus.Topshelf.Tests.PingMessage",
+			                      	         "rhino-queues://localhost:22001/rhino_servicebus_topshelf_tests_pingconsumer"));
+		}
+	}
+
+	public class HostingMSMQWithTopshelf
+		: HostingWithTopshelf<MSMQHostedService>
+	{
+		protected override void ConfigureBus(DefaultHost host)
+		{
+			host.BusConfiguration(c => c.Bus("msmq://localhost/rhino.servicebus.topshelf.tests.pongconsumer")
+			                           	.Receive("Rhino.ServiceBus.Topshelf.Tests.PingMessage",
+			                           	         "msmq://localhost/rhino.servicebus.topshelf.tests.pingconsumer"));
+		}
+	}
+
+	public abstract class HostingWithTopshelf<THost> : IDisposable
+		where THost : HostedService, new()
+	{
+		private readonly DefaultHost host;
+		private readonly Bootstrapper<IApplicationHost> pingService;
+
+		protected HostingWithTopshelf()
+		{
+			ServiceAppDomain.Set(AppDomain.CurrentDomain);
 			pingService = new PingBootstrapConsumer();
-			wait = new ManualResetEvent(false);
 			host = new DefaultHost();
-			host.BusConfiguration(c => c.Bus("msmq://localhost/rhino.servicebus.topshelf.tests.hostingwithtopshelf_pongconsumer")
-				.Receive("Rhino.ServiceBus.Topshelf.Tests.HostingWithTopshelf+PingMessage", "msmq://localhost/rhino.servicebus.topshelf.tests.hostingwithtopshelf_pingconsumer"));
+			ConfigureBus(host);
 			host.Start<PongBootstrapper>();
 		}
 
-		private static ManualResetEvent wait = new ManualResetEvent(false);
+		protected abstract void ConfigureBus(DefaultHost host);
 
 		[Fact]
 		public void Can_set_the_default_endpoint_by_convention()
@@ -46,12 +65,13 @@ namespace Rhino.ServiceBus.Topshelf.Tests
 					var bus = host.Container.Resolve<IServiceBus>();
 					bus.Send(new PingMessage());
 
-					Assert.True(wait.WaitOne(TimeSpan.FromSeconds(5)));
+					Assert.True(PongConsumer.Wait.WaitOne(TimeSpan.FromSeconds(5)));
 				}
 
 				finally
 				{
 					runner.Coordinator.Stop();
+					PongConsumer.Wait = new ManualResetEvent(false);
 				}
 			}
 		}
@@ -69,73 +89,101 @@ namespace Rhino.ServiceBus.Topshelf.Tests
 					var bus = host.Container.Resolve<IServiceBus>();
 					bus.Send(new PingMessage());
 
-					wait.WaitOne(TimeSpan.FromSeconds(5));
-					Assert.Equal(12, retryCount);
+					PongConsumer.Wait.WaitOne(TimeSpan.FromSeconds(5));
+					Assert.Equal(12, PongConsumer.RetryCount);
 				}
 
 				finally
 				{
 					runner.Coordinator.Stop();
+					PongConsumer.Wait = new ManualResetEvent(false);
 				}
 			}
 		}
 
-		public class TestBootStrapper : AbstractBootStrapper
-		{
-			protected override bool IsTypeAcceptableForThisBootStrapper(Type t)
-			{
-				return t == typeof (PingConsumer);
-			}
-		}
-
-		public class PingMessage
-		{
-
-		}
-		public class PongMessage
-		{
-			public int NumberOfRetries { get; set; }
-		}
-		public class PingConsumer : ConsumerOf<PingMessage>
-		{
-			private readonly IServiceBus bus;
-			private static int numberOfRetries;
-
-			public PingConsumer(IServiceBus bus, IKernel kernel)
-			{
-				this.bus = bus;
-				var facility = kernel.GetFacilities().OfType<AbstractRhinoServiceBusFacility>()
-					.First();
-				numberOfRetries = facility.NumberOfRetries;
-			}
-
-			public void Consume(PingMessage message)
-			{
-				bus.Send(new PongMessage
-				{
-					NumberOfRetries = numberOfRetries
-				});
-			}
-		}
-		public class PongConsumer : ConsumerOf<PongMessage>
-		{
-			public void Consume(PongMessage message)
-			{
-				retryCount = message.NumberOfRetries;
-				wait.Set();
-
-			}
-		}
+		#region Nested type: PingBootstrapConsumer
 
 		[Serializable]
-		public class PingBootstrapConsumer : BootstrapConsumer<PingConsumer, HostedService, TestBootStrapper>{}
-
-		public class PongBootstrapper : AbstractBootStrapper
+		public class PingBootstrapConsumer : BootstrapConsumer<PingConsumer, THost, TestBootStrapper>
 		{
-			protected override bool IsTypeAcceptableForThisBootStrapper(Type t)
-			{
-				return t == typeof (PongConsumer);
-			}
 		}
+
+		#endregion
+
+		public void Dispose()
+		{
+			host.Container.Dispose();
+		}
+	}
+
+	
+	public class PingMessage
+	{
+	}
+
+	public class PongBootstrapper : AbstractBootStrapper
+	{
+		protected override bool IsTypeAcceptableForThisBootStrapper(Type t)
+		{
+			return t == typeof (PongConsumer);
+		}
+	}
+
+
+	public class PongConsumer : ConsumerOf<PongMessage>
+	{
+		public static int RetryCount;
+		public static ManualResetEvent Wait = new ManualResetEvent(false);
+
+		#region ConsumerOf<PongMessage> Members
+
+		public void Consume(PongMessage message)
+		{
+			RetryCount = message.NumberOfRetries;
+			Wait.Set();
+		}
+
+		#endregion
+	}
+
+
+	public class PongMessage
+	{
+		public int NumberOfRetries { get; set; }
+	}
+
+
+	public class TestBootStrapper : AbstractBootStrapper
+	{
+		protected override bool IsTypeAcceptableForThisBootStrapper(Type t)
+		{
+			return t == typeof (PingConsumer);
+		}
+	}
+
+	public class PingConsumer : ConsumerOf<PingMessage>
+	{
+		private static int numberOfRetries;
+		private readonly IServiceBus bus;
+
+		public PingConsumer(IServiceBus bus, IKernel kernel)
+		{
+			this.bus = bus;
+			var facility = kernel.GetFacilities().OfType<AbstractRhinoServiceBusFacility>()
+				.First();
+			numberOfRetries = facility.NumberOfRetries;
+		}
+
+		#region ConsumerOf<PingMessage> Members
+
+		public void Consume(PingMessage message)
+		{
+			bus.Send(new PongMessage
+			{
+				NumberOfRetries = numberOfRetries
+			});
+		}
+
+		#endregion
 	}
 }
