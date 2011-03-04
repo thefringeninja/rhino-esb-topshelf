@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
 
 namespace Rhino.ServiceBus.Topshelf
 {
@@ -31,7 +29,7 @@ namespace Rhino.ServiceBus.Topshelf
 
 		#region Nested type: Singleton
 
-		class Singleton : MarshalByRefObject
+		protected class Singleton : MarshalByRefObject
 		{
 			private static Singleton instance;
 			private readonly IDictionary<Uri, int> portAssignment = new Dictionary<Uri, int>();
@@ -65,6 +63,11 @@ namespace Rhino.ServiceBus.Topshelf
 				}
 			}
 
+			public IDictionary<Uri, int> PortAssignment
+			{
+				get { return portAssignment; }
+			}
+
 			public void StartWithPort(int port)
 			{
 				lastPort = port;
@@ -73,10 +76,10 @@ namespace Rhino.ServiceBus.Topshelf
 			public void AssignPort(ref Uri queue)
 			{
 				int port;
-				if (false == portAssignment.TryGetValue(queue, out port))
+				if (false == PortAssignment.TryGetValue(queue, out port))
 				{
 					port = lastPort++;
-					portAssignment.Add(queue, port);
+					PortAssignment.Add(queue, port);
 				}
 
 				var builder = new UriBuilder(queue) {Port = port};
