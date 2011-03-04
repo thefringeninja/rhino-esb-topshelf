@@ -38,9 +38,7 @@ namespace Rhino.ServiceBus.Topshelf
 
 				foreach (var bootStrapperType in bootStrapperTypes)
 				{
-					var bootStrapper = (Bootstrapper<IApplicationHost>) (bootStrapperType.GetConstructor(Type.EmptyTypes).IsPublic
-					                                                     	? Activator.CreateInstance(bootStrapperType)
-					                                                     	: Activator.CreateInstance(bootStrapperType, true));
+					var bootStrapper = (Bootstrapper<IApplicationHost>)Activator.CreateInstance(bootStrapperType);
 					action(c, bootStrapper);
 				}
 			});
